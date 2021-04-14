@@ -97,7 +97,7 @@ export default {
 			// left tilt = -y, right tilt = +y
 			// want ax & ay to be zero 1g=16384
 			// so... let's say 100 off axis = 10 thrust on opposite side?
-			let K = 10; // aN/T
+			let K = 50; // aN/T
 			/*
 			let n1 = this.s1;
 			let n2 = this.s2;
@@ -109,7 +109,7 @@ export default {
 			let n3 = this.target;
 			let n4 = this.target;
 			if (this.ax < 0) {
-				this.db = this.ax / K;
+				this.db = -1 * (this.ax / K);
 				n2 += this.db;
 				n4 += this.db;
 			} else {
@@ -118,7 +118,7 @@ export default {
 				n3 += this.df;
 			}
 			if (this.ay < 0) {
-				this.dl = this.ay / K;
+				this.dl = -1 * (this.ay / K);
 				n1 += this.dl;
 				n2 += this.dl;
 			} else {
