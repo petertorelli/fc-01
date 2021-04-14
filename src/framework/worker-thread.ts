@@ -5,16 +5,11 @@ const parser = new readline();
 let g_port: serialport|undefined = undefined;
 
 function start () {
-    g_port = new serialport('/dev/tty.usbmodem14314303', {
+    g_port = new serialport('/dev/ttyACM0', {
         baudRate: 115200
     });
     g_port.pipe(parser);
     parser.on('data', (line: string) => {
-        if (line.match(/^t/)) {
-            //pass
-        } else {
-            console.log(line);
-        }
         if (process.send) {
             process.send(line.toString());
         }
@@ -38,7 +33,7 @@ process.on('message', message => {
         start();
     } else if (parts[0] == 'stop') {
         stop();
-    } else if (parts[0] == 'sa') {
+    } else if (parts[0].match(/s[1234afblr]/)) {
         g_port?.write(message);
     }
 });

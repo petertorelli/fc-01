@@ -43,11 +43,22 @@ class Framework extends EventEmitter {
         this.worker.on('exit', (code, signal) => this.workerExit(code, signal));
         this.worker.on('message', message => this.workerMessage(message));
     }
-    public send (message: string): void {
+    public send (message: string) {
         if (this.worker) {
-            console.log(message);
             this.worker.send(message);
         }
+    }
+    public sendAck (message: string) {
+        return new Promise<void>(resolve => {
+            const listen = (message: string) => {
+                if (message.match(/m-ready/)) {
+                    this.worker?.removeListener('message', listen);
+                    resolve();
+                }
+            }
+            this.worker?.on('message', listen);
+            this.send(message);
+        });
     }
     public destructor () {
         if (this.worker) {
@@ -76,13 +87,8 @@ class Framework extends EventEmitter {
         }
         if (parts[0] == 't') {
             this.emit('coords', parts.splice(1, 6));
-        } 
-        /*else if (parts[0] == 's') {
+        } else if (parts[0] == 's') {
             this.emit('speed', parts.splice(1, 6));
-        }
-        */
-        else {
-            console.log(message);
         }
     }
 }
