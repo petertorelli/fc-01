@@ -6,10 +6,11 @@ let g_port: serialport|undefined = undefined;
 
 function start () {
     g_port = new serialport('/dev/ttyACM0', {
-        baudRate: 115200
+        baudRate: 921600
     });
     g_port.pipe(parser);
     parser.on('data', (line: string) => {
+        //console.log(line);
         if (process.send) {
             process.send(line.toString());
         }
@@ -33,7 +34,7 @@ process.on('message', message => {
         start();
     } else if (parts[0] == 'stop') {
         stop();
-    } else if (parts[0].match(/s[1234afblr]/)) {
+    } else { //if (parts[0].match(/s[1234afblr]/)) {
         g_port?.write(message);
     }
 });
