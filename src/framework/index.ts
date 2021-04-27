@@ -2,7 +2,7 @@
  * This wrapper loads the framework into its own process and then connects
  * the input source and output sink to the command parser and GMB,
  * respectively.
- * 
+ *
  * NOTES:
  * The packager we are currently using for electron (electron-webpack) can
  * put the worker-thread.js in a different location depending on whether
@@ -12,7 +12,7 @@
  import * as path from 'path';
  import * as console from 'console';
  import { EventEmitter } from 'events';
- 
+
 class Framework extends EventEmitter {
     private worker: child_process.ChildProcess|null = null;
     constructor () {
@@ -24,7 +24,7 @@ class Framework extends EventEmitter {
      * the child process responses. We also don't know where to put intermediate
      * files until initialization since it will vary based on who inits the
      * framework.
-     * 
+     *
      * @param homeDir Where to put user and temp files.
      */
     public init () {
@@ -43,6 +43,11 @@ class Framework extends EventEmitter {
         this.worker.on('exit', (code, signal) => this.workerExit(code, signal));
         this.worker.on('message', message => this.workerMessage(message));
     }
+    public getPorts () {
+        if (this.worker) {
+            this.worker.send('ports');
+        }
+    }
     public send (message: string) {
         if (this.worker) {
             this.worker.send(message);
@@ -55,7 +60,7 @@ class Framework extends EventEmitter {
                     this.worker?.removeListener('message', listen);
                     resolve();
                 }
-            }
+            };
             this.worker?.on('message', listen);
             this.send(message);
         });
@@ -81,6 +86,7 @@ class Framework extends EventEmitter {
         console.log('Worker exit, code:', code, ', signal:', signal);
     }
     public workerMessage (message: any) {
+        // thought we ditched this for a space?
         const parts = message.split(':');
         if (parts.length < 1) {
             return;
@@ -89,6 +95,8 @@ class Framework extends EventEmitter {
             this.emit('coords', parts.splice(1, 6));
         } else if (parts[0] == 's') {
             this.emit('speed', parts.splice(1, 6));
+        } else if (parts[0] == 'port') {
+            this.emit('port', parts[1]);
         }
     }
 }

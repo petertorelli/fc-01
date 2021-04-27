@@ -1,20 +1,32 @@
 import * as serialport from 'serialport';
 const readline = require('@serialport/parser-readline');
 const parser = new readline();
+import * as fs from 'fs';
 
 let g_port: serialport|undefined = undefined;
+let fd:number = 0;
 
-function start () {
-    g_port = new serialport('/dev/ttyACM0', {
+function send (message: string) {
+    if (process.send) {
+        process.send(message);
+    }
+}
+
+function start (path: string) {
+    console.log('open port', path);
+    parser.on('data', (line: string) => {
+        if (fd > 0) {
+            fs.writeSync(fd, `${line}\n`);
+        }
+        send(line.toString());
+    });
+    g_port = new serialport(path, {
         baudRate: 921600
+    }).on('error', error => {
+        stop();
+        console.log('opening port', error.message);
     });
     g_port.pipe(parser);
-    parser.on('data', (line: string) => {
-        //console.log(line);
-        if (process.send) {
-            process.send(line.toString());
-        }
-    });
 }
 
 function stop () {
@@ -22,6 +34,18 @@ function stop () {
         g_port.close(error => {
             console.log('closed', error);
         });
+    }
+    if (fd > 2) {
+        fs.closeSync(fd);
+    }
+}
+
+function record (state: string) {
+    if (state == '1') {
+        fd = fs.openSync("runlog.txt", "w");
+    } else {
+        fs.closeSync(fd);
+        fd = 0;
     }
 }
 
@@ -31,9 +55,17 @@ process.on('message', message => {
         return;
     }
     if (parts[0] == 'start') {
-        start();
+        start(parts[1]);
     } else if (parts[0] == 'stop') {
         stop();
+    } else if (parts[0] == 'ports') {
+        serialport.list().then(list => {
+            list.forEach(port => {
+                send(`port:${port.path}`);
+            });
+        });
+    } else if (parts[0] == 'record') {
+        record(parts[1]);
     } else { //if (parts[0].match(/s[1234afblr]/)) {
         g_port?.write(message);
     }
@@ -45,6 +77,7 @@ process.on('message', message => {
  * otherwise we will have zombie processes filling up the machine.
  */
 async function exit () {
+    stop();
     process.exit();
 }
 

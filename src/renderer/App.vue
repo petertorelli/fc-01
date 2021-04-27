@@ -5,43 +5,101 @@ html(lang='en')
 		meta(name='viewport',content='width=device-width,initial-scale=1,shrink-to-fit=no')
 		title Fucking fuck fuck ...
 	body
-		div#app
-			center.m-2
-				button.btn.btn-sm.btn-primary(@click='telemetry') Telemetry {{ this.isTelemetry ? 'On' : 'Off' }}
-				button.btn.btn-sm.btn-primary.ml-2(@click='calibrate') Calibrate
-				button.btn.btn-sm.btn-primary.ml-2(@click='clearCal') Clear
-			.d-flex.justify-content-around.my-5
-				vu-meter(text='x-accel, <i>N</i>' color='red' type='arc' :val='ax')
-				vu-meter(text='y-accel, <i>N</i>' color='blue' type='arc' :val='ay')
-				vu-meter(text='z-accel, <i>N</i>' color='green' type='arc' :val='az')
-			.d-flex.justify-content-around.my-5
-				vu-meter(text='x-axis &omega; &deg;/sec' color='red' type='circle' :val='gx')
-				vu-meter(text='y-axis &omega; &deg;/sec' color='blue' type='circle' :val='gy')
-				vu-meter(text='z-axis &omega; &deg;/sec' color='green' type='circle' :val='gz')
-			.d-flex.justify-content-center.align-items-stretch.my-5
-				div
-					q-rotor(text='Speed, #4' :val='s4')
-					q-rotor(text='Speed, #3' :val='s3')
-				div
-					b(style='color: red;') Front
-				div
-					q-rotor(text='Speed, #2' :val='s2')
-					q-rotor(text='Speed, #1' :val='s1')
-			center.m-2
-				button.btn.btn-secondary(@click='stabilize') Stabilization {{ this.isStabilizing ? 'On' : 'Off' }}
-			.d-flex.justify-content-center
-				.form-inline
-					button.btn.btn-sm.btn-primary(@click="saneg") &lt;
-					input.form-control.form-control-sm(
-						type="number" v-model='target').mx-2.text-center
-					button.btn.btn-sm.btn-primary(@click="sapos") &gt;
-			center.m-2
-				button.btn.btn-danger(style='height: 5rem; width: 5rem;' @click="stop") STOP
-			.d-flex.justify-content-around
-				div Left &delta; = {{ dl.toFixed(3) }}
-				div Right &delta; = {{ dr.toFixed(3) }}
-				div Front &delta; = {{ df.toFixed(3) }}
-				div Back &delta; = {{ db.toFixed(3) }}
+		table#app
+			tr
+				td.align-top.p-2
+					.d-flex.flex-column
+						select.mb-2.custom-select(v-model='selectedPort' @change='choosePort')
+							option(value=-1) --Select a serial port--
+							option(v-for='port in ports' :value='port') {{ port }}
+						button.mb-2.btn.btn-sm.btn-primary(@click='telemetry') Turn Telemetry {{ this.isTelemetry ? 'Off' : 'On' }}
+						button.mb-2.btn.btn-sm.btn-primary(@click='record') Turn Recording {{ this.isRecording ? 'Off' : 'On' }}
+						h5 Target
+						.d-flex.mb-2.justify-content-center
+							.form-inline
+								button.btn.btn-sm.btn-primary(@click="saneg") &lt;
+								input.form-control.form-control-sm(type="number" v-model='target' disabled).mx-2.text-center
+								button.btn.btn-sm.btn-primary(@click="sapos") &gt;
+						button.btn.btn-danger(style='height: 5rem;' @click="stop") STOP
+				td.align-top.p-2
+					.d-flex.justify-content-around
+						vu-meter(
+							text='x-accel, <i>N</i>'
+							color='red'
+							type='arc'
+							:val='dialax'
+							:labels='["L", "", "R"]')
+						vu-meter(
+							text='y-accel, <i>N</i>'
+							color='blue'
+							type='arc'
+							:val='dialay'
+							:labels='["B", "", "F"]')
+						vu-meter(
+							text='z-accel, <i>N</i>'
+							color='green'
+							type='arc'
+							:val='dialaz'
+							:labels='["+2", "0", "-2"]')
+					.d-flex.justify-content-around
+						vu-meter(
+							text='Pitch &omega; &deg;/sec'
+							color='red'
+							type='circle'
+							:val='dialgx'
+							:labels='["", "F", "", "B"]')
+						vu-meter(
+							text='Roll &omega; &deg;/sec'
+							color='blue'
+							type='circle'
+							:val='dialgy'
+							:labels='["", "R", "", "L"]')
+						vu-meter(
+							text='Yaw &omega; &deg;/sec'
+							color='green'
+							type='circle'
+							:val='dialgz'
+							:labels='["", "CW", "", "CCW"]')
+			tr
+				td.align-top.p-2
+					.d-flex.flex-column
+						h5 Motor Adjust
+						.mb-2.text-monospace
+							div Left&nbsp; &delta; = {{ dl.toFixed(3).padStart(8, "0") }}
+							div Right &delta;      = {{ dr.toFixed(3).padStart(8, "0") }}
+							div Front &delta;      = {{ df.toFixed(3).padStart(8, "0") }}
+							div Back&nbsp; &delta; = {{ db.toFixed(3).padStart(8, "0") }}
+						button.mb-2.btn.btn-sm.btn-secondary(@click='stabilize') Turn Stabilization {{ this.isStabilizing ? 'Off' : 'On' }}
+				td.align-top.p-2
+					h5 Front
+					.d-flex.justify-content-center.align-items-stretch
+						div
+							vu-meter(
+								text='Motor 4 Speed'
+								color='black'
+								type='circle'
+								:val='(s4 / 1000) * Math.PI + Math.PI'
+								:labels='["0%", "12.5%", "25%", "50%"]')
+							vu-meter(
+								text='Motor 3 Speed'
+								color='black'
+								type='circle'
+								:val='(s3 / 1000) * Math.PI + Math.PI'
+								:labels='["0%", "12.5%", "25%", "50%"]')
+						div
+							vu-meter(
+								text='Motor 2 Speed'
+								color='black'
+								type='circle'
+								:val='(s2 / 1000) * Math.PI + Math.PI'
+								:labels='["0%", "12.5%", "25%", "50%"]')
+							vu-meter(
+								text='Motor 1 Speed'
+								color='black'
+								type='circle'
+								:val='(s1 / 1000) * Math.PI + Math.PI'
+								:labels='["0%", "12.5%", "25%", "50%"]')
+					h5 Rear
 
 </template>
 
@@ -50,7 +108,12 @@ import VuMeter from './components/VuMeter';
 import Rotor from './components/Rotor';
 import { framework } from '../framework';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import Filter from './filter';
 
+const filter_ax = new Filter(10);
+const filter_ay = new Filter(10);
+const filter_az = new Filter(10);
+/*
 function pause(ms) {
 	return new Promise(resolve => {
 		setTimeout(() => {
@@ -58,13 +121,13 @@ function pause(ms) {
 		}, ms);
 	});
 }
-
+*/
 export default {
 	name: 'app',
 	data() {
 		return {
-			ax: 0, ay: 0, az: 0,
-			gx: 0, gy: 0, gz: 0,
+			ports: [],
+			selectedPort: -1,
 			s1: 0, s2: 0, s3: 0, s4: 0,
 			target: 0,
 			dl: 0, dr: 0,
@@ -72,8 +135,31 @@ export default {
 			isStabilizing: false,
 			isBusy: false,
 			isTelemetry: false,
-			calax: 0, calay: 0, calaz: 0,
-			calgx: 0, calgy: 0, calgz: 0,
+			isRecording: false,
+			rawax: 0,
+			raway: 0,
+			rawaz: 0,
+			rawgx: 0,
+			rawgy: 0,
+			rawgz: 0,
+			ax: 0,
+			ay: 0,
+			az: 0,
+			gx: 0,
+			gy: 0,
+			gz: 0,
+			calax: 890,
+			calay: -566,
+			calaz: (-16384+14649), // calibrate to 1g when flat
+			calgx: -664,
+			calgy: -248,
+			calgz: 1107,
+			dialax: 0,
+			dialay: 0,
+			dialaz: 0,
+			dialgx: 0,
+			dialgy: 0,
+			dialgz: 0,
 		};
 	},
 	components: {
@@ -84,30 +170,19 @@ export default {
 		stop() {
 			this.isStabilizing = false;
 			this.target = 0;
-			framework.send(`sa ${this.target}\n`);
+			// recall 1 = 0 speed armed, 0 = disarmed
+			framework.send(`sa ${this.target + 1}\n`);
 		},
 		stabilize () {
 			this.isStabilizing = !this.isStabilizing;
 		},
-		clearCal () {
-			this.calax = 0;
-			this.calay = 0;
-			this.calaz = 0;
-			this.calgx = 0;
-			this.calgy = 0;
-			this.calgz = 0;
-		},
-		calibrate () {
-			// note data is already cal'd so don't do this more than once
-			// zero first
-			this.calax =     0 + this.ax;
-			this.calay =     0 + this.ay;
-			this.calaz =(16384 - this.az) * -1;
-			this.calgx =     0 + this.gx;
-			this.calgy =     0 + this.gy;
-			this.calgz =     0 + this.gz;
+		record () {
+			this.isRecording = !this.isRecording;
+			framework.send(`record ${this.isRecording ? '1' : '0'}`);
 		},
 		async telemetry () {
+			console.log(this.rawax, this.raway, this.rawaz);
+			console.log(this.rawgx, this.rawgy, this.rawgz);
 			this.isTelemetry = !this.isTelemetry;
 			await framework.sendAck(`t${this.isTelemetry ? '1' : '0'}\n`);
 		},
@@ -119,16 +194,15 @@ export default {
 			this.target -= 10;
 			framework.send(`sa ${this.target}\n`);
 		},
+		choosePort () {
+			framework.send(`start ${this.selectedPort}`);
+		},
 		async computeResponse () {
 			if (this.isStabilizing == false) {
 				this.db = this.df = this.dl = this.dr = 0;
 				return;
 			}
-			// Marvin's Ass is the cable, tilting back is -x, forward is +x
-			// left tilt = -y, right tilt = +y
-			// want ax & ay to be zero 1g=16384
-			// so... let's say 100 off axis = 10 thrust on opposite side?
-			let K = 50; // aN/T
+			let K = 100; // aN/T
 			/*
 			let n1 = this.s1;
 			let n2 = this.s2;
@@ -172,14 +246,26 @@ export default {
 		}
 	},
 	mounted () {
+		/* TODO: how do we know we don't have backpressure? */
 		framework.on('coords', async (parts) => {
-			this.ax = parseInt(parts[0]) - this.calax;
-			this.ay = parseInt(parts[1]) - this.calay;
-			this.az = parseInt(parts[2]) - this.calaz;
-			// Mounted new 6050 backwards. Doh.
-			this.gx = (-1 * parseInt(parts[3])) - this.calgx;
-			this.gy = parseInt(parts[4]) - this.calgy;
-			this.gz = parseInt(parts[5]) - this.calgz;
+			this.rawax = filter_ax.add(parseInt(parts[0]));
+			this.raway = filter_ay.add(parseInt(parts[1]));
+			this.rawaz = filter_az.add(parseInt(parts[2]));
+			this.rawgx = parseInt(parts[3]);
+			this.rawgy = parseInt(parts[4]) * -1; // match the GUI
+			this.rawgz = parseInt(parts[5]) * -1; // match the GUI
+			this.ax = this.rawax - this.calax;
+			this.ay = this.raway - this.calay;
+			this.az = this.rawaz - this.calaz;
+			this.gx = this.rawgx - this.calgx;
+			this.gy = this.rawgy + this.calgy; // match the GUI
+			this.gz = this.rawgz + this.calgz; // match the GUI
+			this.dialax = Math.PI * ((this.ax / 16384) / 4);
+			this.dialay = Math.PI * ((this.ay / 16384) / 4);
+			this.dialaz = Math.PI * ((this.az / 16384) / 4);
+			this.dialgx = Math.PI * ((this.gx / 131) / 250);
+			this.dialgy = Math.PI * ((this.gy / 131) / 250);
+			this.dialgz = Math.PI * ((this.gz / 131) / 250);
 			await this.computeResponse();
 		});
 		framework.on('speed', parts => {
@@ -189,21 +275,21 @@ export default {
 			this.s4 = parseInt(parts[3]);
 		});
 		framework.on('error', error => {
-			console.error(error);
+			console.error('toplevel framework error', error);
+		});
+		framework.on('port', port => {
+			this.ports.push(port);
 		});
 		framework.init();
-		framework.send('start');
+		framework.getPorts();
 	}
 };
 </script>
 
 <style>
 	#app {
-		font-family: 'Consolas', Helvetica, Arial, sans-serif;
 		-webkit-font-smoothing: antialiased;
 		-moz-osx-font-smoothing: grayscale;
 		text-align: center;
-		color: #2c3e50;
-		margin-top: 60px;
 	}
 </style>

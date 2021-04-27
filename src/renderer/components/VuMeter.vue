@@ -23,25 +23,25 @@ div(:style='{color}')
 				text-anchor='middle'
 				font-size='.75rem'
 				alignment-baseline='central'
-				font-family='consolas') 0
+				font-family='consolas') {{ this.labels[0] }}
 			text(x=117.5 y=70
 				:fill='color'
 				text-anchor='start'
 				font-size='.75rem'
 				alignment-baseline='central'
-				font-family='consolas') 125
+				font-family='consolas') {{ this.labels[1] }}
 			text(x=70 y=122.5
 				:fill='color'
 				text-anchor='middle'
 				font-size='.75rem'
 				alignment-baseline='central'
-				font-family='consolas') 250
+				font-family='consolas') {{ this.labels[2] }}
 			text(x=22.5 y=70
 				:fill='color'
 				text-anchor='end'
 				font-size='.75rem'
 				alignment-baseline='central'
-				font-family='consolas') 125
+				font-family='consolas') {{ this.labels[3] }}
 			line(x1=70 y1=70 :x2='x2' :y2='y2' :stroke='color')
 	div(v-else)
 		svg(height='70' width='120')
@@ -64,20 +64,21 @@ div(:style='{color}')
 				text-anchor='middle'
 				font-size='.75rem'
 				alignment-baseline='central'
-				font-family='consolas') 0
+				font-family='consolas') {{ this.labels[1] }}
 			text(x=0 y=60
 				:fill='color'
 				text-anchor='start'
 				font-size='.75rem'
 				alignment-baseline='central'
-				font-family='consolas') -2
+				font-family='consolas') {{ this.labels[0] }}
 			text(x=120 y=60
 				:fill='color'
 				text-anchor='end'
 				font-size='.75rem'
 				alignment-baseline='central'
-				font-family='consolas') +2
+				font-family='consolas') {{ this.labels[2] }}
 			line(x1=60 y1=60 :x2='x2' :y2='y2' :stroke='color')
+	div.small {{ this.val.toFixed(2) }}
 	div(v-html='text')
 </template>
 
@@ -92,21 +93,15 @@ export default Vue.extend({
 			y2: 0,
 		};
 	},
-	props: [ 'color', 'text', 'type', 'val' ],
+	props: [ 'color', 'text', 'type', 'val', 'labels' ],
 	watch: {
 		val (l: number) {
 			if (this.type == 'circle') {
-				// 131 per deg/sec
-				let scaled = (-l / 131) / 250; // 250 degree max
-				scaled = scaled * Math.PI; // 250 degrees/sec
-				this.x2 = Math.cos(scaled - Math.PI / 2) * 50 + 70;
-				this.y2 = Math.sin(scaled - Math.PI / 2) * 50 + 70;
+				this.x2 = Math.cos(l - Math.PI / 2) * 50 + 70;
+				this.y2 = Math.sin(l - Math.PI / 2) * 50 + 70;
 			} else {
-				let scaled = l / 16384; // FS_2 +/-2g
-				scaled /= 2; // half cricle
-				scaled /= 2; // 2gs per half circle
-				this.x2 = Math.cos(scaled * Math.PI - Math.PI / 2) * 50 + 60;
-				this.y2 = Math.sin(scaled * Math.PI - Math.PI / 2) * 50 + 60;
+				this.x2 = Math.cos(l - Math.PI / 2) * 50 + 60;
+				this.y2 = Math.sin(l - Math.PI / 2) * 50 + 60;
 			}
 		}
 	},
