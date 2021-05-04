@@ -78,7 +78,7 @@ div(:style='{color}')
 				alignment-baseline='central'
 				font-family='consolas') {{ this.labels[2] }}
 			line(x1=60 y1=60 :x2='x2' :y2='y2' :stroke='color')
-	div.small {{ this.val.toFixed(2) }}
+	div.small {{ this.rval.toFixed(prec) }}
 	div(v-html='text')
 </template>
 
@@ -93,7 +93,7 @@ export default Vue.extend({
 			y2: 0,
 		};
 	},
-	props: [ 'color', 'text', 'type', 'val', 'labels' ],
+	props: [ 'color', 'text', 'type', 'val', 'labels', 'rval', 'prec' ],
 	watch: {
 		val (l: number) {
 			if (this.type == 'circle') {

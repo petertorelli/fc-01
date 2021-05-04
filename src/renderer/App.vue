@@ -24,52 +24,65 @@ html(lang='en')
 				td.align-top.p-2
 					.d-flex.justify-content-around
 						vu-meter(
-							text='x-accel, <i>N</i>'
+							text='x-accel, <i>g</i>'
 							color='red'
 							type='arc'
-							:val='dialax'
+							:prec='1'
+							:rval='ax'
+							:val='Math.PI * ax / (4)'
 							:labels='["L", "", "R"]')
 						vu-meter(
-							text='y-accel, <i>N</i>'
+							text='y-accel, <i>g</i>'
 							color='blue'
 							type='arc'
-							:val='dialay'
+							:prec='1'
+							:rval='ay'
+							:val='Math.PI * ay / (4)'
 							:labels='["B", "", "F"]')
 						vu-meter(
-							text='z-accel, <i>N</i>'
+							text='z-accel, <i>g</i>'
 							color='green'
 							type='arc'
-							:val='dialaz'
+							:prec='1'
+							:rval='az'
+							:val='Math.PI * az / (4)'
 							:labels='["+2", "0", "-2"]')
 					.d-flex.justify-content-around
 						vu-meter(
 							text='Pitch &omega; &deg;/sec'
 							color='red'
 							type='circle'
-							:val='dialgx'
+							:prec='0'
+							:rval='gx'
+							:val='(gx) * (Math.PI / 180)'
 							:labels='["", "F", "", "B"]')
 						vu-meter(
 							text='Roll &omega; &deg;/sec'
 							color='blue'
 							type='circle'
-							:val='dialgy'
+							:prec='0'
+							:rval='gy'
+							:val='(gy) * (Math.PI / -180)'
 							:labels='["", "R", "", "L"]')
 						vu-meter(
 							text='Yaw &omega; &deg;/sec'
 							color='green'
 							type='circle'
-							:val='dialgz'
+							:prec='0'
+							:rval='gz'
+							:val='(gz) * (Math.PI / -180)'
 							:labels='["", "CW", "", "CCW"]')
 			tr
 				td.align-top.p-2
 					.d-flex.flex-column
 						h5 Motor Adjust
 						.mb-2.text-monospace
-							div Left&nbsp; &delta; = {{ dl.toFixed(3).padStart(8, "0") }}
-							div Right &delta;      = {{ dr.toFixed(3).padStart(8, "0") }}
-							div Front &delta;      = {{ df.toFixed(3).padStart(8, "0") }}
-							div Back&nbsp; &delta; = {{ db.toFixed(3).padStart(8, "0") }}
+							div &delta;1 = {{ d1.toFixed(3).padStart(8, " ") }}
+							div &delta;2 = {{ d2.toFixed(3).padStart(8, " ") }}
+							div &delta;3 = {{ d3.toFixed(3).padStart(8, " ") }}
+							div &delta;4 = {{ d4.toFixed(3).padStart(8, " ") }}
 						button.mb-2.btn.btn-sm.btn-secondary(@click='stabilize') Turn Stabilization {{ this.isStabilizing ? 'Off' : 'On' }}
+						input.form-control.form-control-sm(type='number' v-model='K')
 				td.align-top.p-2
 					h5 Front
 					.d-flex.justify-content-center.align-items-stretch
@@ -78,27 +91,31 @@ html(lang='en')
 								text='Motor 4 Speed'
 								color='black'
 								type='circle'
-								:val='(s4 / 1000) * Math.PI + Math.PI'
-								:labels='["0%", "12.5%", "25%", "50%"]')
+								:rval='s4 / 20'
+								:val='(s4 / 2000) * 2 * Math.PI + Math.PI'
+								:labels='["50%", "75%", "0%", "25%"]')
 							vu-meter(
 								text='Motor 3 Speed'
 								color='black'
 								type='circle'
-								:val='(s3 / 1000) * Math.PI + Math.PI'
-								:labels='["0%", "12.5%", "25%", "50%"]')
+								:rval='s3 / 20'
+								:val='(s3 / 2000) * 2 * Math.PI + Math.PI'
+								:labels='["50%", "75%", "0%", "25%"]')
 						div
 							vu-meter(
 								text='Motor 2 Speed'
 								color='black'
 								type='circle'
-								:val='(s2 / 1000) * Math.PI + Math.PI'
-								:labels='["0%", "12.5%", "25%", "50%"]')
+								:rval='s2 / 20'
+								:val='(s2 / 2000) * 2 * Math.PI + Math.PI'
+								:labels='["50%", "75%", "0%", "25%"]')
 							vu-meter(
 								text='Motor 1 Speed'
 								color='black'
 								type='circle'
-								:val='(s1 / 1000) * Math.PI + Math.PI'
-								:labels='["0%", "12.5%", "25%", "50%"]')
+								:rval='s1 / 20'
+								:val='(s1 / 2000) * 2 * Math.PI + Math.PI'
+								:labels='["50%", "75%", "0%", "25%"]')
 					h5 Rear
 
 </template>
@@ -130,8 +147,10 @@ export default {
 			selectedPort: -1,
 			s1: 0, s2: 0, s3: 0, s4: 0,
 			target: 0,
-			dl: 0, dr: 0,
-			df: 0, db: 0,
+			d1: 0,
+			d2: 0,
+			d3: 0,
+			d4: 0,
 			isStabilizing: false,
 			isBusy: false,
 			isTelemetry: false,
@@ -154,12 +173,7 @@ export default {
 			calgx: -664,
 			calgy: -248,
 			calgz: 1107,
-			dialax: 0,
-			dialay: 0,
-			dialaz: 0,
-			dialgx: 0,
-			dialgy: 0,
-			dialgz: 0,
+			K: 0.01,
 		};
 	},
 	components: {
@@ -168,10 +182,13 @@ export default {
 	},
 	methods: {
 		stop() {
+			// RACE CONDITION WITH COMPUTERESPONSE()
 			this.isStabilizing = false;
 			this.target = 0;
-			// recall 1 = 0 speed armed, 0 = disarmed
-			framework.send(`sa ${this.target + 1}\n`);
+			framework.send(`sa ${this.target}\n`);
+			framework.send(`sa ${this.target}\n`);
+			framework.send(`sa ${this.target}\n`);
+			framework.send(`sa ${this.target}\n`);
 		},
 		stabilize () {
 			this.isStabilizing = !this.isStabilizing;
@@ -202,13 +219,6 @@ export default {
 				this.db = this.df = this.dl = this.dr = 0;
 				return;
 			}
-			let K = 100; // aN/T
-			/*
-			let n1 = this.s1;
-			let n2 = this.s2;
-			let n3 = this.s3;
-			let n4 = this.s4;
-			*/
 			// L FRNT R
 			// E 4  2 I
 			// F 3  1 G
@@ -217,28 +227,79 @@ export default {
 			let n2 = this.target;
 			let n3 = this.target;
 			let n4 = this.target;
+
+			let d1 = 0, d2 = 0, d3 = 0, d4 = 0;
+
+
+			let dx = Math.abs(this.gx) / this.K;
+			let dy = Math.abs(this.gy) / this.K;
+			// gy > 0 = tilting left
+			// gy < 0 = tilting right
+			if (this.gy > 0) {
+				d1 -= dy / 2;
+				d2 -= dy / 2;
+				d3 += dy / 2;
+				d4 += dy / 2;
+			} else {
+				d1 += dx / 2;
+				d2 += dx / 2;
+				d3 -= dx / 2;
+				d4 -= dx / 2;
+			}
+			// gx < 0 = tilting backward
+			// gx > 0 = tilting forward
+			if (this.gx < 0) {
+				d1 += dx / 2;
+				d2 -= dx / 2;
+				d3 += dx / 2;
+				d4 -= dx / 2;
+			} else {
+				d1 -= dx / 2;
+				d2 += dx / 2;
+				d3 -= dx / 2;
+				d4 += dx / 2;
+			}
+
+/*
+			let dx = Math.abs(this.ax) / this.K;
+			let day = Math.abs(this.ay) / this.K;
 			// ax < 0 = tilting left
 			// ax > 0 = tilting right
 			if (this.ax < 0) {
-				this.db = -1 * (this.ax / K);
-				n4 += this.db;
-				n3 += this.db;
+				d1 -= dx / 2;
+				d2 -= dx / 2;
+				d3 += dx / 2;
+				d4 += dx / 2;
 			} else {
-				this.df = this.ax / K;
-				n2 += this.df;
-				n1 += this.df;
+				d1 += dax / 2;
+				d2 += dax / 2;
+				d3 -= dax / 2;
+				d4 -= dax / 2;
 			}
 			// ay < 0 = tilting backward
 			// ay > 0 = tilting forward
 			if (this.ay < 0) {
-				this.dl = -1 * (this.ay / K);
-				n1 += this.dl;
-				n3 += this.dl;
+				d1 += day / 2;
+				d2 -= day / 2;
+				d3 += day / 2;
+				d4 -= day / 2;
 			} else {
-				this.dr = this.ay / K;
-				n2 += this.dr;
-				n4 += this.dr;
+				d1 -= day / 2;
+				d2 += day / 2;
+				d3 -= day / 2;
+				d4 += day / 2;
 			}
+*/
+			n1 = this.target + d1;
+			n2 = this.target + d2;
+			n3 = this.target + d3;
+			n4 = this.target + d4;
+			this.d1 = d1;
+			this.d2 = d2;
+			this.d3 = d3;
+			this.d4 = d4;
+
+			// RACE CONDITION with stop()
 			await framework.sendAck(`s1 ${n1.toFixed(0)}\n`);
 			await framework.sendAck(`s2 ${n2.toFixed(0)}\n`);
 			await framework.sendAck(`s3 ${n3.toFixed(0)}\n`);
@@ -252,20 +313,16 @@ export default {
 			this.raway = filter_ay.add(parseInt(parts[1]));
 			this.rawaz = filter_az.add(parseInt(parts[2]));
 			this.rawgx = parseInt(parts[3]);
-			this.rawgy = parseInt(parts[4]) * -1; // match the GUI
-			this.rawgz = parseInt(parts[5]) * -1; // match the GUI
-			this.ax = this.rawax - this.calax;
-			this.ay = this.raway - this.calay;
-			this.az = this.rawaz - this.calaz;
-			this.gx = this.rawgx - this.calgx;
-			this.gy = this.rawgy + this.calgy; // match the GUI
-			this.gz = this.rawgz + this.calgz; // match the GUI
-			this.dialax = Math.PI * ((this.ax / 16384) / 4);
-			this.dialay = Math.PI * ((this.ay / 16384) / 4);
-			this.dialaz = Math.PI * ((this.az / 16384) / 4);
-			this.dialgx = Math.PI * ((this.gx / 131) / 250);
-			this.dialgy = Math.PI * ((this.gy / 131) / 250);
-			this.dialgz = Math.PI * ((this.gz / 131) / 250);
+			this.rawgy = parseInt(parts[4]);
+			this.rawgz = parseInt(parts[5]);
+			// +32768=+2g,-32768=-2g; convert to single Gs
+			this.ax = (this.rawax - this.calax) / (32768 / 2);
+			this.ay = (this.raway - this.calay) / (32768 / 2);
+			this.az = (this.rawaz - this.calaz) / (32768 / 2);
+			// +32768=+250deg,-32768=-250deg; convert to single degree
+			this.gx = (this.rawgx - this.calgx) / (32768 / 250);
+			this.gy = (this.rawgy - this.calgy) / (32768 / 250);
+			this.gz = (this.rawgz - this.calgz) / (32768 / 250);
 			await this.computeResponse();
 		});
 		framework.on('speed', parts => {
