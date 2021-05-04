@@ -4,7 +4,7 @@ html(lang='en')
 		meta(charset='utf-8')
 		meta(name='viewport',content='width=device-width,initial-scale=1,shrink-to-fit=no')
 		title Fucking fuck fuck ...
-	body
+	body(v-on:keydown='handleKey')
 		table#app
 			tr
 				td.align-top
@@ -207,6 +207,9 @@ export default {
 		'q-rotor': Rotor,
 	},
 	methods: {
+		handleKey (key) {
+			console.log(key);
+		},
 		stop() {
 			// RACE CONDITION WITH COMPUTERESPONSE()
 			this.isStabilizing = false;
@@ -254,10 +257,10 @@ export default {
 			// E 4  2 I
 			// F 3  1 G
 			// T REAR H
-			let n1 = this.target + this.trim1;
-			let n2 = this.target + this.trim2;
-			let n3 = this.target + this.trim3;
-			let n4 = this.target + this.trim4;
+		
+		
+		
+		
 
 			let d1 = 0, d2 = 0, d3 = 0, d4 = 0;
 
@@ -291,10 +294,10 @@ export default {
 				//d3 -= dx / HALF;
 				d4 += dx / HALF;
 			}
-			n1 = this.target + d1;
-			n2 = this.target + d2;
-			n3 = this.target + d3;
-			n4 = this.target + d4;
+			let n1 = this.target + d1 + this.trim1;
+			let n2 = this.target + d2 + this.trim2;
+			let n3 = this.target + d3 + this.trim3;
+			let n4 = this.target + d4 + this.trim4;
 			this.d1 = d1;
 			this.d2 = d2;
 			this.d3 = d3;
