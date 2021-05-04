@@ -56,7 +56,11 @@ class Framework extends EventEmitter {
     public sendAck (message: string) {
         return new Promise<void>(resolve => {
             const listen = (message: string) => {
-                if (message.match(/m-ready/)) {
+                if (message.match(/^1/)) {
+                    this.worker?.removeListener('message', listen);
+                    resolve();
+                }
+                else if (message.match(/^0/)) {
                     this.worker?.removeListener('message', listen);
                     resolve();
                 }
@@ -86,15 +90,12 @@ class Framework extends EventEmitter {
         console.log('Worker exit, code:', code, ', signal:', signal);
     }
     public workerMessage (message: any) {
-        // thought we ditched this for a space?
-        const parts = message.split(':');
+        const parts = message.split(' ');
         if (parts.length < 1) {
             return;
         }
         if (parts[0] == 't') {
-            this.emit('coords', parts.splice(1, 6));
-        } else if (parts[0] == 's') {
-            this.emit('speed', parts.splice(1, 6));
+            this.emit('telemetry', parts.splice(1, 10));
         } else if (parts[0] == 'port') {
             this.emit('port', parts[1]);
         }

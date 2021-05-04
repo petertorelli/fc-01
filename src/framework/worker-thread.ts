@@ -61,7 +61,7 @@ process.on('message', message => {
     } else if (parts[0] == 'ports') {
         serialport.list().then(list => {
             list.forEach(port => {
-                send(`port:${port.path}`);
+                send(`port ${port.path}`);
             });
         });
     } else if (parts[0] == 'record') {

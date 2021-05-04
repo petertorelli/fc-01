@@ -8,15 +8,15 @@ let mainWindow: BrowserWindow|null;
 
 function createMainWindow () {
     const window = new BrowserWindow({
-        width: 1280,
-        height: 1024,
+        width: 1600,
+        height: 500,
         webPreferences: {
             nodeIntegration: true
         }
     });
 
     if (isDevelopment) {
-        window.webContents.openDevTools();
+//        window.webContents.openDevTools();
     }
 
     if (isDevelopment) {

@@ -22,26 +22,22 @@ div(:style='{color}')
 				:fill='color'
 				text-anchor='middle'
 				font-size='.75rem'
-				alignment-baseline='central'
-				font-family='consolas') {{ this.labels[0] }}
+				alignment-baseline='central') {{ this.labels[0] }}
 			text(x=117.5 y=70
 				:fill='color'
 				text-anchor='start'
 				font-size='.75rem'
-				alignment-baseline='central'
-				font-family='consolas') {{ this.labels[1] }}
+				alignment-baseline='central') {{ this.labels[1] }}
 			text(x=70 y=122.5
 				:fill='color'
 				text-anchor='middle'
 				font-size='.75rem'
-				alignment-baseline='central'
-				font-family='consolas') {{ this.labels[2] }}
+				alignment-baseline='central') {{ this.labels[2] }}
 			text(x=22.5 y=70
 				:fill='color'
 				text-anchor='end'
 				font-size='.75rem'
-				alignment-baseline='central'
-				font-family='consolas') {{ this.labels[3] }}
+				alignment-baseline='central') {{ this.labels[3] }}
 			line(x1=70 y1=70 :x2='x2' :y2='y2' :stroke='color')
 	div(v-else)
 		svg(height='70' width='120')
@@ -63,20 +59,17 @@ div(:style='{color}')
 				:fill='color'
 				text-anchor='middle'
 				font-size='.75rem'
-				alignment-baseline='central'
-				font-family='consolas') {{ this.labels[1] }}
+				alignment-baseline='central') {{ this.labels[1] }}
 			text(x=0 y=60
 				:fill='color'
 				text-anchor='start'
 				font-size='.75rem'
-				alignment-baseline='central'
-				font-family='consolas') {{ this.labels[0] }}
+				alignment-baseline='central') {{ this.labels[0] }}
 			text(x=120 y=60
 				:fill='color'
 				text-anchor='end'
 				font-size='.75rem'
-				alignment-baseline='central'
-				font-family='consolas') {{ this.labels[2] }}
+				alignment-baseline='central') {{ this.labels[2] }}
 			line(x1=60 y1=60 :x2='x2' :y2='y2' :stroke='color')
 	div.small {{ this.rval.toFixed(prec) }}
 	div(v-html='text')
