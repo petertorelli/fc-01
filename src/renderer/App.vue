@@ -211,7 +211,7 @@ export default {
 			// RACE CONDITION WITH COMPUTERESPONSE()
 			this.isStabilizing = false;
 			this.target = 0;
-			framework.send(`sa ${this.target}\n`);
+			framework.send(`sa 0 0 0 0\n`);
 		},
 		stabilize () {
 			this.isStabilizing = !this.isStabilizing;
