@@ -21,7 +21,7 @@ function start (path: string) {
         send(line.toString());
     });
     g_port = new serialport(path, {
-        baudRate: 921600
+        baudRate: 250000
     }).on('error', error => {
         stop();
         console.log('opening port', error.message);

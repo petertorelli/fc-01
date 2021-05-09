@@ -4,7 +4,7 @@ html(lang='en')
 		meta(charset='utf-8')
 		meta(name='viewport',content='width=device-width,initial-scale=1,shrink-to-fit=no')
 		title Fucking fuck fuck ...
-	body(v-on:keydown='handleKey')
+	body
 		table#app
 			tr
 				td.align-top
@@ -40,23 +40,23 @@ html(lang='en')
 							type='circle'
 							:prec='3'
 							:rval='ay'
-							:val='Math.PI * ay / (4)'
-							:labels='["", "B", "", "F"]')
+							:val='Math.PI * ay / (4) * 5'
+							:labels='["", "F", "", "B"]')
 						vu-meter(
 							text='x-accel, <i>g</i>'
 							color='red'
 							type='circle'
 							:prec='3'
 							:rval='ax'
-							:val='Math.PI * ax / (4)'
-							:labels='["", "L", "", "R"]')
+							:val='Math.PI * ax / (4) * 5'
+							:labels='["", "R", "", "L"]')
 						vu-meter(
 							text='z-accel, <i>g</i>'
 							color='green'
 							type='circle'
 							:prec='3'
 							:rval='az'
-							:val='Math.PI * az / (4)'
+							:val='Math.PI * az / (4) * 5'
 							:labels='["0", "+2", "", "-2"]')
 				td.align-top
 					.d-flex.justify-content-center.align-items-stretch
@@ -100,9 +100,9 @@ html(lang='en')
 						h5 Target
 						.d-flex.mb-2.justify-content-center
 							.form-inline
-								button.btn.btn-sm.btn-primary(@click="saneg") &lt;
+								button.btn.btn-sm.btn-primary(@click="changeTarget(-10)") &lt;
 								input.form-control.form-control-sm(type="number" v-model='target' disabled).mx-2.text-center
-								button.btn.btn-sm.btn-primary(@click="sapos") &gt;
+								button.btn.btn-sm.btn-primary(@click="changeTarget(+10)") &gt;
 						button.btn.btn-danger(style='height: 5rem;' @click="stop") STOP
 						small Trim 1
 						input.form-control.form-control-sm.text-right(type='number' v-model='trim1')
@@ -122,7 +122,8 @@ html(lang='en')
 							div &delta;3 = {{ d3.toFixed(3).padStart(8, " ") }}
 							div &delta;4 = {{ d4.toFixed(3).padStart(8, " ") }}
 						button.mb-2.btn.btn-sm.btn-secondary(@click='stabilize') Turn Stabilization {{ this.isStabilizing ? 'Off' : 'On' }}
-						input.form-control.form-control-sm(type='number' v-model='K')
+						input.form-control.form-control-sm(type='number' v-model='Kp')
+						input.form-control.form-control-sm(type='number' v-model='Ki')
 				td.align-top.p-2
 					.d-flex.flex-column
 						b Calibration
@@ -149,6 +150,15 @@ import { framework } from '../framework';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import Filter from './filter';
 
+function CLIPCLAMP(v, n, x) {
+	if (v > x) {
+		return x;
+	}
+	if (v < n) {
+		return n;
+	}
+	return v;
+}
 const filter_ax = new Filter(10);
 const filter_ay = new Filter(10);
 const filter_az = new Filter(10);
@@ -169,10 +179,6 @@ export default {
 			selectedPort: -1,
 			s1: 0, s2: 0, s3: 0, s4: 0,
 			target: 0,
-			d1: 0,
-			d2: 0,
-			d3: 0,
-			d4: 0,
 			isStabilizing: false,
 			isBusy: false,
 			isTelemetry: false,
@@ -195,11 +201,20 @@ export default {
 			calgx: -664,
 			calgy: -248,
 			calgz: 1107,
-			K: 0.2,
+			Kp: 20,
+			Ki: 0.0,
 			trim1: 0,
 			trim2: 0,
 			trim3: 0,
 			trim4: 0,
+
+			phi_dot_integral: 0,
+			theta_dot_integral: 0,
+			ay_integral: 0,
+			ax_integral: 0,
+
+			d1: 0, d2: 0, d3: 0, d4: 0,
+
 		};
 	},
 	components: {
@@ -207,9 +222,6 @@ export default {
 		'q-rotor': Rotor,
 	},
 	methods: {
-		handleKey (key) {
-			console.log(key);
-		},
 		stop() {
 			// RACE CONDITION WITH COMPUTERESPONSE()
 			this.isStabilizing = false;
@@ -229,16 +241,8 @@ export default {
 			this.isTelemetry = !this.isTelemetry;
 			framework.send(`t${this.isTelemetry ? '1' : '0'}\n`);
 		},
-		sapos() {
-			this.target += 10;
-			let n1 = this.target + this.trim1 * 1;
-			let n2 = this.target + this.trim2 * 1;
-			let n3 = this.target + this.trim3 * 1;
-			let n4 = this.target + this.trim4 * 1;
-			framework.send(`sa ${n1} ${n2} ${n3} ${n4}\n`);
-		},
-		saneg() {
-			this.target -= 10;
+		changeTarget (val) {
+			this.target = CLIPCLAMP(this.target + val, 0, 2000);
 			let n1 = this.target + this.trim1 * 1;
 			let n2 = this.target + this.trim2 * 1;
 			let n3 = this.target + this.trim3 * 1;
@@ -253,58 +257,123 @@ export default {
 				this.db = this.df = this.dl = this.dr = 0;
 				return;
 			}
-			// L FRNT R
-			// E 4  2 I
-			// F 3  1 G
-			// T REAR H
-		
-		
-		
-		
 
-			let d1 = 0, d2 = 0, d3 = 0, d4 = 0;
+			/*
+			The sensor on marvin isn't oriented to the NED (north, east, down)
+			notation that you see in all the online docs.
 
+			Our sensor is mounted (almost in the middle), use right hand rule
 
-			let dx = Math.abs(this.gx) / this.K;
-			let dy = Math.abs(this.gy) / this.K;
-			let HALF = 1; // not using -ve right now
-			// gy > 0 = tilting left
-			// gy < 0 = tilting right
-			if (this.gy > 0) {
-				//d1 -= dy / HALF;
-				//d2 -= dy / HALF;
-				d3 += dy / HALF;
-				d4 += dy / HALF;
+			x ; west is positive
+			y ; south is positive
+			z ; down is positive -- CORRECT!
+
+			ugh.
+
+			Motors are
+
+			NORTH
+			4   2
+			3   1
+			*/
+			// Gyros have been converted to degrees/second
+			// Accelerometers have been converted to Newtons
+			// our sensor is read every 10ms (100hz), so dt = 0.010 sec.
+			//let dt = 0.010;
+			// Rename all our telemetry into standard NED/Euler
+			// Gyroscopes report dynamic rotation, 0 when idle
+			//let dyn_psi = this.gz * dt;
+			//let dyn_psi_dit = this.gz;
+			//let dyn_theta = this.gx * dt * -1;
+			let dyn_theta_dot = this.gx * -1;
+			//let dyn_phi = this.gy * dt * -1;
+			let dyn_phi_dot = this.gy * -1;
+			// Accellerometers can be static Eulers OR dynamic translation
+			let ax = this.ay * -1;
+			let ay = this.ax * -1;
+			//let az = this.az;
+
+			/* Goal is to have phi_dot=theta_dot=psi_dot=0; ax=ay=0; az=g */
+
+			/* Ignoring YAW for now */
+
+			/*
+			What do you do when the phi and theta derviatives are zero but the
+			quad is tilted so it drifts? Should it use AX/AY/AZ data?
+			If az=g then the device is "sliding". If az<>g then it is tilted
+			and translating... which are opposite corrections!
+			Do I need a magnetometer?
+			*/
+
+			let m1_d = 0;
+			let m2_d = 0;
+			let m3_d = 0;
+			let m4_d = 0;
+
+			let Kp = this.Kp;
+			let Ki = this.Ki;
+
+			// maybe i'll play with PI... but P is doing ok...
+
+			this.phi_dot_integral += dyn_phi_dot;
+			this.theta_dot_integral += dyn_theta_dot;
+			this.ax_integral += ax;
+			this.ay_integral += ay;
+			if (dyn_phi_dot > 0) {
+				m1_d += dyn_phi_dot * Kp + this.phi_dot_integral * Ki;
+				m2_d += dyn_phi_dot * Kp + this.phi_dot_integral * Ki;
 			} else {
-				d1 += dx / HALF;
-				d2 += dx / HALF;
-				//d3 -= dx / HALF;
-				//d4 -= dx / HALF;
+				m3_d -= dyn_phi_dot * Kp + this.phi_dot_integral * Ki;
+				m4_d -= dyn_phi_dot * Kp + this.phi_dot_integral * Ki;
 			}
-			// gx < 0 = tilting backward
-			// gx > 0 = tilting forward
-			if (this.gx < 0) {
-				d1 += dx / HALF;
-				//d2 -= dx / HALF;
-				d3 += dx / HALF;
-				//d4 -= dx / HALF;
+
+			if (dyn_theta_dot < 0) {
+				m1_d += dyn_theta_dot * Kp + this.theta_dot_integral * Ki;
+				m3_d += dyn_theta_dot * Kp + this.theta_dot_integral * Ki;
 			} else {
-				//d1 -= dx / HALF;
-				d2 += dx / HALF;
-				//d3 -= dx / HALF;
-				d4 += dx / HALF;
+				m2_d -= dyn_theta_dot * Kp + this.theta_dot_integral * Ki;
+				m4_d -= dyn_theta_dot * Kp + this.theta_dot_integral * Ki;
 			}
-			let n1 = this.target + d1 + this.trim1;
-			let n2 = this.target + d2 + this.trim2;
-			let n3 = this.target + d3 + this.trim3;
-			let n4 = this.target + d4 + this.trim4;
-			this.d1 = d1;
-			this.d2 = d2;
-			this.d3 = d3;
-			this.d4 = d4;
-			// RACE CONDITION with stop()
-			framework.send(
-				`sa ${n1.toFixed(0)} ${n2.toFixed(0)} ${n3.toFixed(0)} ${n4.toFixed(0)}\n`);
+			/*
+			if (ax > 0) {
+				m1_d += ax * Kp + this.ax_integral * Ki;
+				m3_d += ax * Kp + this.ax_integral * Ki;
+			} else {
+				m2_d -= ax * Kp + this.ax_integral * Ki;
+				m4_d -= ax * Kp + this.ax_integral * Ki;
+			}
+
+			if (ay > 0) {
+				m3_d += ay * Kp + this.ay_integral * Ki;
+				m4_d += ay * Kp + this.ay_integral * Ki;
+			} else {
+				m1_d -= ay * Kp + this.ay_integral * Ki;
+				m2_d -= ay * Kp + this.ay_integral * Ki;
+			}
+			*/
+
+			// These are the new motor speed settings from 0 to 1999
+			this.d1 = m1_d;
+			this.d2 = m2_d;
+			this.d3 = m3_d;
+			this.d4 = m4_d;
+			//console.log({m1_d, m2_d, m3_d, m4_d});
+
+			let n1 = CLIPCLAMP(this.target + m1_d, 0, 1999);
+			let n2 = CLIPCLAMP(this.target + m2_d, 0, 1999);
+			let n3 = CLIPCLAMP(this.target + m3_d, 0, 1999);
+			let n4 = CLIPCLAMP(this.target + m4_d, 0, 1999);
+			//console.log({n1, n2, n3, n4});
+
+
+			// TODO: RACE CONDITION with stop()
+			let cmd =
+				`sa ` +
+				`${n1.toFixed(0)} ` +
+				`${n2.toFixed(0)} ` +
+				`${n3.toFixed(0)} ` +
+				`${n4.toFixed(0)}\n`;
+			framework.send(cmd);
 		}
 	},
 	mounted () {
@@ -324,7 +393,7 @@ export default {
 			this.ax = (this.rawax - this.calax) / (32768 / 2);
 			this.ay = (this.raway - this.calay) / (32768 / 2);
 			this.az = (this.rawaz - this.calaz) / (32768 / 2);
-			// +32768=+250deg,-32768=-250deg; convert to single degree
+			// +32768=+250deg,-32768=-250deg/s; convert to single degree/s
 			this.gx = (this.rawgx - this.calgx) / (32768 / 250);
 			this.gy = (this.rawgy - this.calgy) / (32768 / 250);
 			this.gz = (this.rawgz - this.calgz) / (32768 / 250);
@@ -338,6 +407,18 @@ export default {
 		});
 		framework.init();
 		framework.getPorts();
+		// not sure why v-on:keydown on body isn't working...
+		window.onkeydown = (event) => {
+			switch (event.key) {
+				case '[': this.changeTarget(-10); break;
+				case ']': this.changeTarget(+10); break;
+				case '{': this.changeTarget(-100); break;
+				case '}': this.changeTarget(+100); break;
+				case 'x':
+				case 'X': this.stop(); break;
+				default: break;
+			}
+		};
 	}
 };
 </script>
