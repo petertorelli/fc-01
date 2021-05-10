@@ -1,0 +1,3 @@
+[submodule "cube-dshot-02"]
+	path = cube-dshot-02
+	url = git@github.com:petertorelli/cube-dshot-02
